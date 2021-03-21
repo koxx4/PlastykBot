@@ -29,3 +29,13 @@ mainClassName = 'plastykBot.Program'
 apply plugin: 'application'
 //your code
 applicationDefaultJvmArgs = ["-Dfile.encoding=UTF-8"]
+
+task stage(dependsOn: ['build', 'clean'])
+build.mustRunAfter clean
+
+task copyToLib(type: Copy) {
+    into "$buildDir/libs"
+    from(configurations.compile)
+}
+
+stage.dependsOn(copyToLib)

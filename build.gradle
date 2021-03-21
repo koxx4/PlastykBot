@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'org.koxx4'
+version '1.0'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    implementation ('net.dv8tion:JDA:4.2.0_243') {
+        exclude module: 'opus-java'
+    }
+    implementation 'org.simpleframework:simple-xml:2.7.1'
+    implementation 'org.apache.commons:commons-text:1.7'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+test {
+    useJUnitPlatform()
+}
+mainClassName = 'plastykBot.Program'
+
+apply plugin: 'application'
+//your code
+applicationDefaultJvmArgs = ["-Dfile.encoding=UTF-8"]

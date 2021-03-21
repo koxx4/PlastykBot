@@ -39,3 +39,14 @@ task copyToLib(type: Copy) {
 }
 
 stage.dependsOn(copyToLib)
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'plastykBot.Program'
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}

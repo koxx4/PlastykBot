@@ -38,6 +38,38 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
         {
             startFiszkaGuessing(sourceChannel);
         }
+        else if(nextArg.equals("r") || nextArg.equals("reveal"))
+        {
+            if(!arguments.isEmpty())
+                revealFiszkaCard(sourceChannel, arguments.pop());
+        }
+    }
+    private void revealFiszkaCard(MessageChannel sourceChannel, String cardID)
+    {
+        FiszkaCard loadedCard = null;
+        try
+        {
+            loadedCard = loadFiszkaCard(cardID);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            printFailToLoadFiszka(sourceChannel);
+            return;
+        }
+        InputStream cardImageStream = null;
+        try
+        {
+            cardImageStream = new URL(loadedCard.imageURL).openStream();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+            printFailToLoadFiszkaImage(sourceChannel);
+            printFiszkaData(sourceChannel, loadedCard);
+            return;
+        }
+        printFiszkaDataWithImage(sourceChannel, loadedCard, cardImageStream);
     }
     private void startFiszkaGuessing(MessageChannel sourceChannel)
     {
@@ -87,10 +119,11 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
         }
 
         String userAnswer = stringBuilder.toString().trim().toLowerCase();
-        if(getAnswerCorrectness(userAnswer, aim) >= 0.7)
+        if(getAnswerCorrectness(userAnswer, aim) >= 0.6)
         {
             originalMessage.addReaction(thumbupUnicode).queue();
             printCorrectAnswerMessage(originalMessage.getChannel());
+            printFiszkaData(originalMessage.getChannel(), cardToGuess);
         }
         else
         {
@@ -126,7 +159,7 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
         EmbedBuilder embedBuilder = new EmbedBuilder();
         MessageBuilder messageBuilder = new MessageBuilder();
 
-        embedBuilder.setTitle("Fiszka:");
+        embedBuilder.setTitle("Fiszka (" + fiszkaCard.id + "): ");
         embedBuilder.addField("Nazwa: ", fiszkaCard.name, true)
                 .addField("Autor: ", fiszkaCard.author, true)
                 .addField("Styl: ", fiszkaCard.style, true)
@@ -141,7 +174,7 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
         EmbedBuilder embedBuilder = new EmbedBuilder();
         MessageBuilder messageBuilder = new MessageBuilder();
 
-        embedBuilder.setTitle("Fiszka:");
+        embedBuilder.setTitle("Fiszka (" + fiszkaCard.id + "): ");
         embedBuilder.addField("Nazwa: ", fiszkaCard.name, true)
                 .addField("Autor: ", fiszkaCard.author, true)
                 .addField("Styl: ", fiszkaCard.style, true)
@@ -197,6 +230,26 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
 
         FiszkaCard loadedCard =
                 serializer.read(FiszkaCard.class, availableCards[randomGenerator.nextInt(availableCards.length-1)]);
+
+        return loadedCard;
+    }
+    private FiszkaCard loadFiszkaCard(String cardID) throws Exception
+    {
+        String resourcePath = "Cards/fiszki/";
+        String fileName = "card_" + cardID + ".xml";
+        File cards = new File(resourcePath);
+
+        assert cards.exists();
+        assert cards.isDirectory();
+
+        var availableCards = cards.listFiles( (x,y) -> {
+            return y.equals(fileName);
+        });
+
+        FiszkaCard loadedCard =
+                serializer.read(FiszkaCard.class, availableCards[0]);
+
+        assert loadedCard.id.equals(cardID);
 
         return loadedCard;
     }

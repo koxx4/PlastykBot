@@ -19,6 +19,7 @@ import java.util.Stack;
 public class MainEventListener implements EventListener
 {
     private final FiszkaCommandHandler fiszkaCommandHandler = new FiszkaCommandHandler();
+    private final NSFWCommandHandler nsfwCommandHandler = new NSFWCommandHandler();
     private static ContinousCommandHandler continousCommandHandler;
     private String commandPrefix = "!p";
 
@@ -82,6 +83,10 @@ public class MainEventListener implements EventListener
                 {
                     fiszkaCommandHandler.handleFiskzaCommand(arguments, originalMessage);
                 }
+                else if (nextArg.equals("nsfw") || nextArg.equals("szreks"))
+                {
+                    nsfwCommandHandler.handleNSFWCommand(arguments, originalMessage);
+                }
                 else if (nextArg.equals("p") || nextArg.equals("prefix"))
                 {
                     if(!arguments.isEmpty())
@@ -96,7 +101,8 @@ public class MainEventListener implements EventListener
         EmbedBuilder embedBuilder = new EmbedBuilder();
 
         MessageEmbed.Field overallField = new MessageEmbed.Field("Ogolne:",
-                "h lub help --> Wyswietl pomoc", false);
+                "h lub help --> Wyswietl pomoc" +
+                        "p lub prefix --> Zmien prefix do wywolywania komend bota", false);
         MessageEmbed.Field fiszkaField = new MessageEmbed.Field("Fiszki (z przedrostkiem 'f' lub 'fiszka'):",
                 "n lub next --> Pokaz nastepna losowa fiszke\ng lub guess -> Zgaduj nastepna fiszke\n" +
                         "r {id} lub reveal {id} --> pokaz fiszke z takim {id}\n" +

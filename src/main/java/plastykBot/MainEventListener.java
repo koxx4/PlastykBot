@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.GenericEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.EventListener;
@@ -19,6 +20,7 @@ public class MainEventListener implements EventListener
 {
     private final FiszkaCommandHandler fiszkaCommandHandler = new FiszkaCommandHandler();
     private static ContinousCommandHandler continousCommandHandler;
+    private String commandPrefix = "!p";
 
     @Override
     public void onEvent(@NotNull GenericEvent event)
@@ -33,7 +35,7 @@ public class MainEventListener implements EventListener
 
             if(arguments.size() >= 2)
             {
-                handleMainCommand(arguments, originalMessage, messageChannel);
+                handleMainCommand(arguments, originalMessage);
             }
         }
     }
@@ -58,10 +60,13 @@ public class MainEventListener implements EventListener
 
         return arguments;
     }
-    private void handleMainCommand(Stack<String> arguments, Message originalMessage, MessageChannel sourceChannel)
+    private void handleMainCommand(Stack<String> arguments, Message originalMessage)
     {
-        if(arguments.pop().equals("!p"))
+        if(arguments.pop().equals(commandPrefix))
         {
+            User sender = originalMessage.getAuthor();
+            MessageChannel sourceChannel = originalMessage.getChannel();
+
             if(continousCommandHandler != null)
             {
                 continousCommandHandler.continueCommand(arguments, originalMessage);
@@ -75,7 +80,12 @@ public class MainEventListener implements EventListener
                 }
                 else if (nextArg.equals("f") || nextArg.equals("fiszka"))
                 {
-                    fiszkaCommandHandler.handleFiskzaCommand(arguments, sourceChannel);
+                    fiszkaCommandHandler.handleFiskzaCommand(arguments, originalMessage);
+                }
+                else if (nextArg.equals("p") || nextArg.equals("prefix"))
+                {
+                    if(!arguments.isEmpty())
+                        changeCommandPrefix(sourceChannel, arguments.pop());
                 }
             }
         }
@@ -88,13 +98,29 @@ public class MainEventListener implements EventListener
         MessageEmbed.Field overallField = new MessageEmbed.Field("Ogolne:",
                 "h lub help --> Wyswietl pomoc", false);
         MessageEmbed.Field fiszkaField = new MessageEmbed.Field("Fiszki (z przedrostkiem 'f' lub 'fiszka'):",
-                "n lub next --> Zgaduj nastepna fiszke", false);
+                "n lub next --> Pokaz nastepna losowa fiszke\ng lub guess -> Zgaduj nastepna fiszke\n" +
+                        "r {id} lub reveal {id} --> pokaz fiszke z takim {id}\n" +
+                        "t {wartosc} lub threshold {wartosc} --> ustaw nowy prog akceptacji odpowiedzi (wartosci od 0.0 dp 1.0)",
+                        false);
 
         embedBuilder.setColor(Color.DARK_GRAY);
         embedBuilder.setTitle("Pomoc jest juz tutaj! :\n");
         embedBuilder.addField(overallField);
         embedBuilder.addField(fiszkaField);
 
+        messageBuilder.setEmbed(embedBuilder.build());
+        sourceChannel.sendMessage(messageBuilder.build()).queue();
+    }
+    private void changeCommandPrefix(MessageChannel sourceChannel,String newPrefix)
+    {
+        commandPrefix = newPrefix;
+        printCustomTitleEmbed(sourceChannel, "Ustawiono nowy prefix na '" + newPrefix + "'");
+    }
+    private void printCustomTitleEmbed(MessageChannel sourceChannel, String title)
+    {
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        MessageBuilder messageBuilder = new MessageBuilder();
+        embedBuilder.setTitle(title);
         messageBuilder.setEmbed(embedBuilder.build());
         sourceChannel.sendMessage(messageBuilder.build()).queue();
     }

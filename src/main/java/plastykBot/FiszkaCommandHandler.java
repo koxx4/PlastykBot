@@ -2,8 +2,10 @@ package plastykBot;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.MessageBuilder;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.entities.User;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
@@ -19,6 +21,7 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
 {
     private final String thumbupUnicode = "U+1F44D";
     private final String thumbdownUnicode = "U+1F44E";
+    private double correctnessThreshold = 0.65;
     private Serializer serializer = new Persister();
     private Random randomGenerator = new Random();
     private FiszkaCard cardToGuess;
@@ -26,10 +29,18 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
     private enum AnswerAim {
         NAME, AUTHOR, STYLE, PERIOD;
     }
+    private enum PremissionLevel
+    {
+        ADMIN, MODERATOR, ORDINARY_USER
+    }
 
-    public void handleFiskzaCommand(Stack<String> arguments, MessageChannel sourceChannel)
+    public void handleFiskzaCommand(Stack<String> arguments, Message originalMessage)
     {
         String nextArg = arguments.pop();
+        MessageChannel sourceChannel = originalMessage.getChannel();
+        Member senderMemeber = originalMessage.getMember();
+        User sender = originalMessage.getAuthor();
+
         if (nextArg.equals("n") || nextArg.equals("next"))
         {
             printRandomFiszka(sourceChannel);
@@ -43,6 +54,35 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
             if(!arguments.isEmpty())
                 revealFiszkaCard(sourceChannel, arguments.pop());
         }
+        else if(nextArg.equals("t") || nextArg.equals("threshold"))
+        {
+            if(!arguments.isEmpty())
+                setThreshold(sourceChannel, senderMemeber, arguments.pop());
+        }
+    }
+    private void setThreshold(MessageChannel sourceChannel, Member senderMember, String newValue)
+    {
+        if(!hasRole(senderMember, "BotManager"))
+        {
+            printInsufficientPremission(sourceChannel);
+            return;
+        }
+        double newThresholdValue;
+        try
+        {
+            newThresholdValue = Double.parseDouble(newValue);
+            if(newThresholdValue < 0.0 || newThresholdValue > 1.0)
+                throw new NumberFormatException("Threshold must be in between 0.0 - 1.0");
+        }
+        catch (NumberFormatException e)
+        {
+            e.printStackTrace();
+            printIncorrectThresholdValue(sourceChannel);
+            return;
+        }
+        double oldValue = this.correctnessThreshold;
+        this.correctnessThreshold = newThresholdValue;
+        printCustomTitleEmbed(sourceChannel, "Ustawiono now prog z " + oldValue + " na " + newThresholdValue);
     }
     private void revealFiszkaCard(MessageChannel sourceChannel, String cardID)
     {
@@ -119,7 +159,7 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
         }
 
         String userAnswer = stringBuilder.toString().trim().toLowerCase();
-        if(getAnswerCorrectness(userAnswer, aim) >= 0.6)
+        if(getAnswerCorrectness(userAnswer, aim) >= correctnessThreshold)
         {
             originalMessage.addReaction(thumbupUnicode).queue();
             printCorrectAnswerMessage(originalMessage.getChannel());
@@ -186,33 +226,34 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
     }
     private void printFailToLoadFiszka(MessageChannel sourceChannel)
     {
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        MessageBuilder messageBuilder = new MessageBuilder();
-        embedBuilder.setTitle("Fail! Nie zaladowano poprawnie fiszki :c");
-        messageBuilder.setEmbed(embedBuilder.build());
-        sourceChannel.sendMessage(messageBuilder.build()).queue();
+        printCustomTitleEmbed(sourceChannel, "Fail! Nie zaladowano poprawnie fiszki :c");
     }
     private void printFailToLoadFiszkaImage(MessageChannel sourceChannel)
     {
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        MessageBuilder messageBuilder = new MessageBuilder();
-        embedBuilder.setTitle("Fail! ZS gdynia sie zesrala i nie pozwolila mi pobrac poprawnie zdjecia!");
-        messageBuilder.setEmbed(embedBuilder.build());
-        sourceChannel.sendMessage(messageBuilder.build()).queue();
+        printCustomTitleEmbed(sourceChannel, "Fail! ZS gdynia sie zesrala i nie pozwolila mi pobrac poprawnie zdjecia!");
     }
     private void printCorrectAnswerMessage(MessageChannel sourceChannel)
     {
-        EmbedBuilder embedBuilder = new EmbedBuilder();
-        MessageBuilder messageBuilder = new MessageBuilder();
-        embedBuilder.setTitle("Brawo! Jeszcze troche i zdasz.");
-        messageBuilder.setEmbed(embedBuilder.build());
-        sourceChannel.sendMessage(messageBuilder.build()).queue();
+        printCustomTitleEmbed(sourceChannel, "Brawo! Jeszcze troche i zdasz.");
     }
     private void printFailedToRecognizeAnswerAim(MessageChannel sourceChannel)
     {
+        printCustomTitleEmbed(sourceChannel,
+                "Fail! Musisz podac dokladnie co zgadujesz ('autor' lub 'nazwa' lub 'styl' lub 'okres' )!");
+    }
+    private void printIncorrectThresholdValue(MessageChannel sourceChannel)
+    {
+        printCustomTitleEmbed(sourceChannel, "Niepoprawna wartosc progu! (0.00 do 1.00)");
+    }
+    private void printInsufficientPremission(MessageChannel sourceChannel)
+    {
+        printCustomTitleEmbed(sourceChannel, "Niewyswtarczajace uprawnienia do wykonania tej komendy!");
+    }
+    private void printCustomTitleEmbed(MessageChannel sourceChannel, String title)
+    {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         MessageBuilder messageBuilder = new MessageBuilder();
-        embedBuilder.setTitle("Fail! Musisz podac dokladnie co zgadujesz ('autor' lub 'nazwa' lub 'styl' lub 'okres' )!");
+        embedBuilder.setTitle(title);
         messageBuilder.setEmbed(embedBuilder.build());
         sourceChannel.sendMessage(messageBuilder.build()).queue();
     }
@@ -262,6 +303,10 @@ public class FiszkaCommandHandler implements ContinousCommandHandler
                     case STYLE -> userAnswer.equals(cardToGuess.style.trim().toLowerCase()) ;
                     case PERIOD -> userAnswer.equals(cardToGuess.period.trim().toLowerCase());
                 };
+    }
+    private boolean hasRole(Member user, String eligibleRole)
+    {
+        return  user.getRoles().stream().anyMatch( x -> x.getName().equals(eligibleRole));
     }
     private double getAnswerCorrectness(String userAnswer, AnswerAim answerAim)
     {

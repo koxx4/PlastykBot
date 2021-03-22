@@ -20,6 +20,7 @@ public class MainEventListener implements EventListener
 {
     private final FiszkaCommandHandler fiszkaCommandHandler = new FiszkaCommandHandler();
     private final NSFWCommandHandler nsfwCommandHandler = new NSFWCommandHandler();
+    private final FunnyCommandHandler funnyCommandHandler = new FunnyCommandHandler();
     private static ContinousCommandHandler continousCommandHandler;
     private String commandPrefix = "!p";
 
@@ -86,6 +87,10 @@ public class MainEventListener implements EventListener
                 else if (nextArg.equals("nsfw") || nextArg.equals("szreks"))
                 {
                     nsfwCommandHandler.handleNSFWCommand(arguments, originalMessage);
+                }
+                else if (nextArg.equals("fun") || nextArg.equals("funny"))
+                {
+                    funnyCommandHandler.handleFunnyCommand(arguments, originalMessage);
                 }
                 else if (nextArg.equals("p") || nextArg.equals("prefix"))
                 {

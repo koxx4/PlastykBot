@@ -38,7 +38,11 @@ public class NSFWCommandHandler
 
         if (nextArg.equals("rp") || nextArg.equals("random-photo"))
         {
-            printRandomNSFWPhoto(sourceChannel);
+            int iterations = 1;
+            if(!arguments.isEmpty())
+                iterations = Integer.parseInt(arguments.pop());
+            for ( ; iterations > 0; iterations--)
+                printRandomNSFWPhoto(sourceChannel);
         }
     }
     private void printRandomNSFWPhoto(MessageChannel sourceChannel)
